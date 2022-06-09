@@ -11,6 +11,7 @@ func Routes(app *config.Application) *http.ServeMux {
 	// main routes for app
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", Home(app))
+	mux.HandleFunc("/signup", SignUp(app))
 
 	return mux
 }

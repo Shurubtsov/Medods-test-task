@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dshurubtsov/cmd/config"
+	"github.com/dshurubtsov/pkg/mongodb"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -36,8 +37,9 @@ func main() {
 
 	// init application obj
 	app := &config.Application{
-		ErrorLog: errorLog,
-		InfoLog:  infoLog,
+		ErrorLog:  errorLog,
+		InfoLog:   infoLog,
+		UserModel: &mongodb.UserModel{DB: mongoClient},
 	}
 
 	// initialize custom server for our logs
@@ -51,6 +53,7 @@ func main() {
 	errorLog.Fatal(err)
 }
 
+// Open and connect to mongodb; return client for querys to db
 func openMongoDB(dsn string, ctx context.Context) (*mongo.Client, error) {
 
 	client, err := mongo.NewClient(options.Client().ApplyURI(dsn))

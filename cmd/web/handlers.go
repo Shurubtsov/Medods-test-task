@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 
@@ -16,5 +17,27 @@ func Home(app *config.Application) http.HandlerFunc {
 		}
 
 		fmt.Fprint(w, "home page")
+	}
+}
+
+func SignUp(app *config.Application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Set POST method if req does not exist this
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			app.ClientError(w, http.StatusMethodNotAllowed)
+			return
+		}
+
+		username := r.URL.Query().Get("username")
+		password := r.URL.Query().Get("password")
+
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+
+		id, err := app.UserModel.Insert(username, encodedPassword)
+		if err != nil {
+			app.ServerError(w, err)
+		}
+		fmt.Fprint(w, id)
 	}
 }
