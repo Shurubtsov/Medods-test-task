@@ -47,9 +47,24 @@ func SignIn(app *config.Application) http.HandlerFunc {
 		username := r.URL.Query().Get("username")
 		password := r.URL.Query().Get("password")
 
-		res, err := app.UserModel.Login(username, password)
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+
+		res, err := app.UserModel.Login(username, encodedPassword)
 		if err != nil {
 			app.ClientError(w, http.StatusUnauthorized)
+		}
+
+		fmt.Fprintf(w, "%s", res)
+	}
+}
+
+func FindUser(app *config.Application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("id")
+
+		res, err := app.UserModel.FindById(id)
+		if err != nil {
+			app.NotFound(w)
 		}
 
 		fmt.Fprintf(w, "%s", res)
