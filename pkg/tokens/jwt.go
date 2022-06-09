@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -27,7 +26,6 @@ func (j JWTMaker) CreateToken(user models.User) (models.Token, error) {
 	claims["user_id"] = user.Username
 	claims["exp"] = time.Now().Add(time.Hour * 2).Unix()
 
-	// use SHA512 alghorithm
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	jwt := models.Token{}
 
@@ -36,7 +34,7 @@ func (j JWTMaker) CreateToken(user models.User) (models.Token, error) {
 		return jwt, err
 	}
 
-	return j.createRefreshToken(jwt)
+	return j.CreateRefreshToken(jwt)
 }
 
 func (j JWTMaker) ValidateToken(accessToken string) (models.User, error) {
@@ -115,9 +113,9 @@ func (j JWTMaker) ValidateRefreshToken(model models.Token) (models.User, error) 
 	return user, nil
 }
 
-func (j JWTMaker) createRefreshToken(token models.Token) (models.Token, error) {
+func (j JWTMaker) CreateRefreshToken(token models.Token) (models.Token, error) {
 	sha1 := sha1.New()
-	io.WriteString(sha1, os.Getenv("SECRET_KEY"))
+	io.WriteString(sha1, j.SecretKey)
 
 	salt := string(sha1.Sum(nil))[0:16]
 	block, err := aes.NewCipher([]byte(salt))
