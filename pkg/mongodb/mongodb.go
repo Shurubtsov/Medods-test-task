@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/dshurubtsov/pkg/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -35,7 +36,7 @@ func (m *UserModel) Insert(username, password string) (interface{}, error) {
 	return id, nil
 }
 
-func (m *UserModel) Login(username, password string) (string, error) {
+func (m *UserModel) CreateUser(username, password string) (string, error) {
 	// context for db connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -47,6 +48,7 @@ func (m *UserModel) Login(username, password string) (string, error) {
 		{Key: "username", Value: username},
 		{Key: "password", Value: password},
 	}).Decode(&result)
+
 	if err == mongo.ErrNoDocuments {
 		return "User does not exist", err
 	} else if err != nil {
@@ -56,12 +58,12 @@ func (m *UserModel) Login(username, password string) (string, error) {
 	return "u have been logged", nil
 }
 
-func (m *UserModel) FindById(id string) (string, error) {
+func (m *UserModel) FindById(id string) (models.User, error) {
 	// context for db connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var result bson.D
+	user := models.User{}
 
 	collection := m.DB.Database("testbase").Collection("users")
 	objId, _ := primitive.ObjectIDFromHex(id)
@@ -70,15 +72,15 @@ func (m *UserModel) FindById(id string) (string, error) {
 
 	err := collection.FindOne(ctx, bson.D{
 		{Key: "_id", Value: objId},
-	}).Decode(&result)
+	}).Decode(&user)
 
-	fmt.Println(result)
+	fmt.Println(user)
 
 	if err == mongo.ErrNoDocuments {
-		return "User does not exist", err
+		return models.User{}, err
 	} else if err != nil {
-		return err.Error(), err
+		return models.User{}, err
 	}
 
-	return "user in database", nil
+	return user, nil
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/dshurubtsov/cmd/config"
 	"github.com/dshurubtsov/pkg/mongodb"
+	"github.com/dshurubtsov/pkg/tokens"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -35,11 +36,15 @@ func main() {
 	}
 	defer mongoClient.Disconnect(ctx)
 
+	// init jwt maker for tokens
+	jwtmaker := tokens.JWTMaker{SecretKey: "secret"}
+
 	// init application obj
 	app := &config.Application{
 		ErrorLog:  errorLog,
 		InfoLog:   infoLog,
 		UserModel: &mongodb.UserModel{DB: mongoClient},
+		JWTMaker:  &jwtmaker,
 	}
 
 	// initialize custom server for our logs
