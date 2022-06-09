@@ -41,3 +41,17 @@ func SignUp(app *config.Application) http.HandlerFunc {
 		fmt.Fprint(w, id)
 	}
 }
+
+func SignIn(app *config.Application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username := r.URL.Query().Get("username")
+		password := r.URL.Query().Get("password")
+
+		res, err := app.UserModel.Login(username, password)
+		if err != nil {
+			app.ClientError(w, http.StatusUnauthorized)
+		}
+
+		fmt.Fprintf(w, "%s", res)
+	}
+}
