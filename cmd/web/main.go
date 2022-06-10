@@ -37,7 +37,7 @@ func main() {
 	defer mongoClient.Disconnect(ctx)
 
 	// init jwt maker for tokens
-	tokenManager, err := tokens.NewManager("secret")
+	tokenManager, err := tokens.NewManager("secret-phrase0907-331-2356")
 	if err != nil {
 		errorLog.Fatal("can't create token manager")
 	}

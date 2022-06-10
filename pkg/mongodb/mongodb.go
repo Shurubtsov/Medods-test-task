@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -10,7 +11,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
+
+var ErrorNoValideRefreshToken error = errors.New("indalid refresh token")
 
 type UserModel struct {
 	DB *mongo.Client
@@ -37,6 +41,11 @@ func (m *UserModel) CreateUser(username, password string) (interface{}, error) {
 }
 
 func (m *UserModel) UpdateUserToken(id, refreshToken string) error {
+
+	if id == "" {
+		fmt.Println("emty id")
+	}
+
 	// context for db connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -85,4 +94,45 @@ func (m *UserModel) FindById(id string) (models.User, error) {
 	}
 
 	return user, nil
+}
+
+func (m *UserModel) FindByRefreshToken(refreshToken string) (models.User, error) {
+
+	// context for db connection
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	user := models.User{}
+	collection := m.DB.Database("testbase").Collection("users")
+
+	cur, err := collection.Find(ctx, bson.D{})
+	if err != nil {
+		return user, err
+	}
+	defer cur.Close(ctx)
+
+	for cur.Next(ctx) {
+		err := cur.Decode(&user)
+		if err != nil {
+			return user, err
+		}
+
+		//fmt.Println("[MONGO-FIND]test object id", user.ID.Hex())
+
+		//fmt.Println("\n[MONGO-FIND]user in cur loop: ", user)
+
+		match := checkPasswordHash(refreshToken, user.RefreshToken)
+		if !match {
+			continue
+		} else {
+			return user, nil
+		}
+	}
+
+	return user, ErrorNoValideRefreshToken
+}
+
+func checkPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
