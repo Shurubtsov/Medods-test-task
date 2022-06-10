@@ -36,6 +36,30 @@ func (m *UserModel) CreateUser(username, password string) (interface{}, error) {
 	return id, nil
 }
 
+func (m *UserModel) UpdateUserToken(id, refreshToken string) error {
+	// context for db connection
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	collection := m.DB.Database("testbase").Collection("users")
+	objId, _ := primitive.ObjectIDFromHex(id)
+
+	_, err := collection.UpdateOne(ctx, bson.D{
+		{Key: "_id", Value: objId},
+	}, bson.D{{Key: "$set", Value: bson.D{{Key: "refresh_token", Value: refreshToken}}}})
+	if err != nil {
+		return err
+	}
+
+	if err == mongo.ErrNoDocuments {
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *UserModel) FindById(id string) (models.User, error) {
 	// context for db connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

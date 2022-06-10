@@ -37,14 +37,17 @@ func main() {
 	defer mongoClient.Disconnect(ctx)
 
 	// init jwt maker for tokens
-	jwtmaker := tokens.JWTMaker{SecretKey: "secret"}
+	tokenManager, err := tokens.NewManager("secret")
+	if err != nil {
+		errorLog.Fatal("can't create token manager")
+	}
 
 	// init application obj
 	app := &config.Application{
-		ErrorLog:  errorLog,
-		InfoLog:   infoLog,
-		UserModel: &mongodb.UserModel{DB: mongoClient},
-		JWTMaker:  &jwtmaker,
+		ErrorLog:     errorLog,
+		InfoLog:      infoLog,
+		UserModel:    &mongodb.UserModel{DB: mongoClient},
+		TokenManager: tokenManager,
 	}
 
 	// initialize custom server for our logs
@@ -53,6 +56,8 @@ func main() {
 		ErrorLog: errorLog,
 		Handler:  Routes(app),
 	}
+
+	// start server
 	infoLog.Printf("start server on %s", *addr)
 	err = srv.ListenAndServe()
 	errorLog.Fatal(err)
