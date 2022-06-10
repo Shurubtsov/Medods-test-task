@@ -8,6 +8,7 @@
 1.  > -dsn="mongodb://localhost:27017/"
 2.  > -addr="127.0.0.1:9999"
 
+Команды для быстрого клонирования репозитория и старта проекта
 1.  >       git clone https://github.com/Shurubtsov/Medods-test-task.git
 2.  >       go run ./cmd/web/
 
