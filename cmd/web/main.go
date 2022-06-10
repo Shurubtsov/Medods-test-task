@@ -20,6 +20,7 @@ func main() {
 	// configuration flags before run app
 	addr := flag.String("addr", ":4000", "Net address HTTP")
 	dsn := flag.String("dsn", "mongodb://localhost:27017/", "Options for connect to MongoDB")
+	flag.Parse()
 
 	// configure loggers
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
