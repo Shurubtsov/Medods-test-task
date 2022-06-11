@@ -24,8 +24,8 @@
 Пример запроса.
 
 {
-    "username": "DaDddsdnila",
-    "password": "dwerrwe234325qqq4234"
+    "username": "<Имя>",
+    "password": "<Пароль>"
 }
 ```
 
