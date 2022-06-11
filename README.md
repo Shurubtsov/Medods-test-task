@@ -15,7 +15,7 @@
 
 Реализованные ендпоинты:
 1. > POST localhost:port/auth/sign-up
-2. > POST localhost:port/auth/login?id="ObjectId"
+2. > POST localhost:port/auth/get/tokens?id="ObjectId"
 3. > POST localhost:port/auth/refresh
 
 1 - реализует создание пользователя в монгоДБ, параметры запроса username и password
