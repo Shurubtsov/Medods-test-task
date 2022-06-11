@@ -20,7 +20,7 @@ type UserModel struct {
 	DB *mongo.Client
 }
 
-func (m *UserModel) CreateUser(username, password string) (interface{}, error) {
+func (m *UserModel) CreateUser(username, password string) (string, error) {
 	// context for db connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -30,13 +30,11 @@ func (m *UserModel) CreateUser(username, password string) (interface{}, error) {
 		{Key: "username", Value: username},
 		{Key: "password", Value: password},
 	})
-
 	if err != nil {
 		log.Fatal(err.Error())
-		return 0, err
+		return "", err
 	}
-	id := res.InsertedID
-
+	id := fmt.Sprintf("%v", res.InsertedID)
 	return id, nil
 }
 

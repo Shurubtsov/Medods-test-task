@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/dshurubtsov/cmd/config"
 	"github.com/dshurubtsov/pkg/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Test endpoint for check server errors
 func Home(app *config.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check for correct input with right path
@@ -24,34 +26,38 @@ func Home(app *config.Application) http.HandlerFunc {
 	}
 }
 
+// Endpoint for registration users to database
 func SignUp(app *config.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		// Set POST method if req does not exist this
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", http.MethodPost)
+			w.Header().Add("Content-type", "application/json")
 			app.ClientError(w, http.StatusMethodNotAllowed)
 			return
 		}
 
-		// Get username and password from querys from request
-		username := r.URL.Query().Get("username")
-		password := r.URL.Query().Get("password")
-		if username == "" || password == "" {
+		// read body request for find Username and Pass
+		user := models.User{}
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
 			app.ClientError(w, http.StatusBadRequest)
 			return
 		}
+		json.Unmarshal(b, &user)
 
-		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
-		fmt.Println("[CREATE-USER] encoded password: ", encodedPassword)
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(user.Password))
+		//fmt.Println("[CREATE-USER] encoded password: ", encodedPassword)
 
-		id, err := app.UserModel.CreateUser(username, encodedPassword)
+		id, err := app.UserModel.CreateUser(user.Username, encodedPassword)
 		if err != nil {
 			app.ErrorLog.Fatalf("something went wrong when server attempt to create user, error: %v", err.Error())
 			app.ServerError(w, err)
 			return
 		}
 
-		fmt.Fprint(w, id)
+		fmt.Fprint(w, fmt.Sprint("id: ", strings.Trim(id, `ObjectID(")`)))
 	}
 }
 
