@@ -47,10 +47,6 @@ func (m *UserModel) CreateUser(username, password string) (string, error) {
 
 func (m *UserModel) UpdateUserToken(id, refreshToken string) error {
 
-	if id == "" {
-		fmt.Println("emty id")
-	}
-
 	// context for db connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -89,6 +85,7 @@ func (m *UserModel) FindById(id string) (models.User, error) {
 	err := collection.FindOne(ctx, bson.D{
 		{Key: "_id", Value: objId},
 	}).Decode(&user)
+
 	if err == mongo.ErrNoDocuments {
 		return user, err
 	} else if err != nil {
@@ -113,15 +110,12 @@ func (m *UserModel) FindByRefreshToken(refreshToken string) (models.User, error)
 	}
 	defer cur.Close(ctx)
 
+	// TODO: optimize request to database for search with method FindeOne()
 	for cur.Next(ctx) {
 		err := cur.Decode(&user)
 		if err != nil {
 			return user, err
 		}
-
-		//fmt.Println("[MONGO-FIND]test object id", user.ID.Hex())
-
-		//fmt.Println("\n[MONGO-FIND]user in cur loop: ", user)
 
 		match := checkPasswordHash(refreshToken, user.RefreshToken)
 		if !match {

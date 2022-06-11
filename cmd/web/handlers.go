@@ -34,21 +34,18 @@ func SignUp(app *config.Application) http.HandlerFunc {
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", http.MethodPost)
 			w.Header().Add("Content-type", "application/json")
-			app.ClientError(w, http.StatusMethodNotAllowed)
-			return
 		}
 
-		// read body request for find Username and Pass
+		// decode body request for find Username and Pass
 		user := models.User{}
-		b, err := ioutil.ReadAll(r.Body)
+		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			app.ClientError(w, http.StatusBadRequest)
 			return
 		}
-		json.Unmarshal(b, &user)
+		json.Unmarshal(data, &user)
 
 		encodedPassword := base64.StdEncoding.EncodeToString([]byte(user.Password))
-		//fmt.Println("[CREATE-USER] encoded password: ", encodedPassword)
 
 		id, err := app.UserModel.CreateUser(user.Username, encodedPassword)
 		if err != nil {
@@ -56,16 +53,17 @@ func SignUp(app *config.Application) http.HandlerFunc {
 			return
 		}
 
-		fmt.Fprint(w, fmt.Sprint("id: ", strings.Trim(id, `ObjectID(")`)))
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, fmt.Sprintln("id: ", strings.Trim(id, `ObjectID(")`)))
 	}
 }
 
+// Endpoint for create couple tokens for user with ID from request Query
 func GetTokensForUser(app *config.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", http.MethodPost)
 			w.Header().Set("Content-type", "application/json")
-			app.ClientError(w, http.StatusMethodNotAllowed)
 		}
 
 		id := r.URL.Query().Get("id")
@@ -74,9 +72,10 @@ func GetTokensForUser(app *config.Application) http.HandlerFunc {
 			return
 		}
 
+		// find user in our database with id from request
 		user, err := app.UserModel.FindById(id)
 		if err != nil {
-			app.ErrorLog.Fatalf("%v, can't find user", err.Error())
+			app.ClientError(w, http.StatusBadRequest)
 		}
 
 		tokens, err := createTokens(*app, user)
@@ -88,12 +87,16 @@ func GetTokensForUser(app *config.Application) http.HandlerFunc {
 		// bcrypt token for storage it in database
 		bcryptedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(tokens.RefreshToken), 14)
 		if err != nil {
-			app.ErrorLog.Fatal("can't bcrypt token")
+			app.ServerError(w, err)
 			return
 		}
 
 		// add refresh token in db
-		app.UserModel.UpdateUserToken(id, string(bcryptedRefreshToken))
+		err = app.UserModel.UpdateUserToken(id, string(bcryptedRefreshToken))
+		if err != nil {
+			app.ServerError(w, err)
+			return
+		}
 
 		// encode Refresh Token with base64 for response
 		tokens.RefreshToken = base64.StdEncoding.EncodeToString([]byte(tokens.RefreshToken))
@@ -101,34 +104,35 @@ func GetTokensForUser(app *config.Application) http.HandlerFunc {
 		// create body of response
 		resp, err := json.Marshal(tokens)
 		if err != nil {
-			app.ErrorLog.Fatalf("can't Marshal %v, error: %v", tokens, err.Error())
+			app.ServerError(w, err)
 			return
 		}
 
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("Content-type", "application/json")
 		w.Write(resp)
 	}
 }
 
+// Endpoint for Refresh access token for user. Need Json struct in body kind {access_token: "", refresh_token: ""}
 func Refresh(app *config.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set POST method if req does not exist this
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", http.MethodPost)
 			w.Header().Set("Content-type", "application/json")
-			app.ClientError(w, http.StatusMethodNotAllowed)
 		}
 		tokens := models.Token{}
 
-		body, err := ioutil.ReadAll(r.Body)
+		// decode body json request
+		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			app.ServerError(w, err)
+			app.ClientError(w, http.StatusBadRequest)
+			return
 		}
-		json.Unmarshal(body, &tokens)
+		json.Unmarshal(data, &tokens)
 
 		decodedBase64RefreshToken, err := base64.StdEncoding.DecodeString(tokens.RefreshToken)
 		if err != nil {
-			app.ErrorLog.Fatal("can't decode refresh token")
 			app.ServerError(w, err)
 			return
 		}
@@ -168,27 +172,31 @@ func Refresh(app *config.Application) http.HandlerFunc {
 		//fmt.Println("[HANDLER:165]user ID: ", user.ID)
 		app.UserModel.UpdateUserToken(user.ID.Hex(), string(bcryptedRefreshToken))
 
+		// create body of response
 		resp, err := json.Marshal(tokens)
 		if err != nil {
-			app.ErrorLog.Fatalf("can't Marshal %v, error: %v", tokens, err.Error())
+			app.ServerError(w, err)
 			return
 		}
 
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("Content-type", "application/json")
 		w.Write(resp)
 	}
 }
 
+// Create couple tokens with binding each other
 func createTokens(app config.Application, user models.User) (models.Token, error) {
 
 	tokens := models.Token{}
 
-	accessToken, err := app.TokenManager.NewJWT(user.Username)
+	// encode JWT with payload of sub from ID user for his identification in service
+	accessToken, err := app.TokenManager.NewJWT(user.ID.Hex())
 	if err != nil {
 		app.ErrorLog.Fatal("can't create new tokens")
 		return tokens, err
 	}
 
+	// encoded with salt of access token for his binding to refresh token
 	refreshToken, err := app.TokenManager.NewRefreshToken(accessToken)
 	if err != nil {
 		app.ErrorLog.Fatalf("can't create refresh token, error: %v", err.Error())
