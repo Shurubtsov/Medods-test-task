@@ -69,41 +69,31 @@ func Login(app *config.Application) http.HandlerFunc {
 			return
 		}
 
-		tokens := models.Token{}
 		user, err := app.UserModel.FindById(id)
 		if err != nil {
 			app.ErrorLog.Fatalf("%v, can't find user", err.Error())
 		}
 
-		// create accesss token for user
-		accessToken, err := app.TokenManager.NewJWT(user.Username)
+		tokens, err := createTokens(*app, user)
 		if err != nil {
-			app.ErrorLog.Fatalf("can't create token, error: %v", err.Error())
 			app.ServerError(w, err)
 			return
 		}
-		// create refresh token for user
-		refreshToken, err := app.TokenManager.NewRefreshToken(accessToken)
-		if err != nil {
-			app.ErrorLog.Fatalf("can't create refresh token, error: %v", err.Error())
-			return
-		}
-
-		// encode Refresh Token with base64
-		base64RefreshToken := base64.StdEncoding.EncodeToString([]byte(refreshToken))
-
-		// fill token.Models for response it in body
-		tokens.AccessToken, tokens.RefreshToken = accessToken, base64RefreshToken
 
 		// bcrypt token for storage it in database
-		bcryptedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(refreshToken), 14)
+		bcryptedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(tokens.RefreshToken), 14)
 		if err != nil {
 			app.ErrorLog.Fatal("can't bcrypt token")
 			return
 		}
 
+		// add refresh token in db
 		app.UserModel.UpdateUserToken(id, string(bcryptedRefreshToken))
 
+		// encode Refresh Token with base64 for response
+		tokens.RefreshToken = base64.StdEncoding.EncodeToString([]byte(tokens.RefreshToken))
+
+		// create body of response
 		resp, err := json.Marshal(tokens)
 		if err != nil {
 			app.ErrorLog.Fatalf("can't Marshal %v, error: %v", tokens, err.Error())
@@ -154,33 +144,21 @@ func Refresh(app *config.Application) http.HandlerFunc {
 			return
 		}
 
-		//fmt.Println("[HANDLER:137]User after find ref token is ", user)
-
-		// update tokenы if user finded
-		accessToken, err := app.TokenManager.NewJWT(user.Username)
+		tokens, err = createTokens(*app, user)
 		if err != nil {
-			app.ErrorLog.Fatal("can't create new tokens")
+			app.ServerError(w, err)
 			return
 		}
-
-		refreshToken, err := app.TokenManager.NewRefreshToken(accessToken)
-		if err != nil {
-			app.ErrorLog.Fatalf("can't create refresh token, error: %v", err.Error())
-			return
-		}
-
-		// encode Refresh Token with base64
-		base64RefreshToken := base64.StdEncoding.EncodeToString([]byte(refreshToken))
-
-		// fill token.Models for response it in body
-		tokens.AccessToken, tokens.RefreshToken = accessToken, base64RefreshToken
 
 		// bcrypt token for storage it in database
-		bcryptedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(refreshToken), 14)
+		bcryptedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(tokens.RefreshToken), 14)
 		if err != nil {
 			app.ErrorLog.Fatal("can't bcrypt token")
 			return
 		}
+
+		// encode Refresh Token with base64 for response
+		tokens.RefreshToken = base64.StdEncoding.EncodeToString([]byte(tokens.RefreshToken))
 
 		//fmt.Println("[HANDLER:165]user ID: ", user.ID)
 		app.UserModel.UpdateUserToken(user.ID.Hex(), string(bcryptedRefreshToken))
@@ -194,4 +172,26 @@ func Refresh(app *config.Application) http.HandlerFunc {
 		w.Header().Add("Content-Type", "application/json")
 		w.Write(resp)
 	}
+}
+
+func createTokens(app config.Application, user models.User) (models.Token, error) {
+
+	tokens := models.Token{}
+
+	accessToken, err := app.TokenManager.NewJWT(user.Username)
+	if err != nil {
+		app.ErrorLog.Fatal("can't create new tokens")
+		return tokens, err
+	}
+
+	refreshToken, err := app.TokenManager.NewRefreshToken(accessToken)
+	if err != nil {
+		app.ErrorLog.Fatalf("can't create refresh token, error: %v", err.Error())
+		return tokens, err
+	}
+
+	// fill token.Models for response it in body
+	tokens.AccessToken, tokens.RefreshToken = accessToken, refreshToken
+
+	return tokens, nil
 }
