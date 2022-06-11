@@ -25,7 +25,7 @@
 	mux.HandleFunc("/auth/refresh", Refresh(app))
 ```
 Примечание к маршруту `/auth/get/tokens`
-> В конце идёт параметр запроса ..tokens?id=<GUID>
+> В конце идёт параметр запроса ..tokens?id=GUID вида "cda6498a235d4f7eae19661d41bc154c"
 
 Тело запроса к маршруту `/auth/sign-up`
 ```json
