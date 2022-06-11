@@ -1,7 +1,7 @@
 # Medods-test-task
 
 ## Описание
-Реализация части сервиса аутентификации. Технологии проекта: MongoDB, Jwt, bcrypt, base64
+Реализация части сервиса аутентификации. Технологии проекта: MongoDB-driver, Jwt, bcrypt, base64, mux
 
 ## Тестирование
 Для старта проекта предусмотрены 2 флага addr и dsn, для адреса локального сервера и для соединения с MongoDB:
@@ -14,14 +14,22 @@
 
 
 Реализованные ендпоинты:
-1. > POST localhost:port/auth/sign-up
-2. > POST localhost:port/auth/get/tokens?id="ObjectId"
-3. > POST localhost:port/auth/refresh
+```go
+        // [GET] Маршрут для проверки жизнеспособности вебсервера
+	mux.HandleFunc("/", Home(app))
+        // [POST] Маршрут для создания пользователя в бд
+	mux.HandleFunc("/auth/sign-up", SignUp(app))
+    
+	// [POST] Основные маршруты для тестового задания
+	mux.HandleFunc("/auth/get/tokens", GetTokensForUser(app))
+	mux.HandleFunc("/auth/refresh", Refresh(app))
+```
+Примечание к маршруту `/auth/get/tokens`
+> В конце идёт параметр запроса ..tokens?id=<GUID>
 
-1 - реализует создание пользователя в монгоДБ, параметры запроса username и password
-
+Тело запроса к маршруту `/auth/sign-up`
 ```json
-Пример запроса.
+Пример
 
 {
     "username": "<Имя>",
@@ -29,16 +37,13 @@
 }
 ```
 
-2 - реализует запрос JWT и Refresh токена по айди из монгоДБ, пример "?id=62a34e1b11543aeab2ad021d" , отправляет пару токенов, Refresh токен хешируется base64 и хранится в базе данных в виде bcrypt хеша
-
-3 - реализует запрос на обновление пары JWT и Refresh токенов по отправленному телу из уже имеющегося Refresh токена, который записывается в базу данных при логине
-
+Тело запроса к маршруту `/auth/refresh`
 ```json
-Пример запроса.
+Пример
 
 {
     "access_token": "<Токен>",
     "refresh_token": "<Токен>"
 }
 ```
-`Тестирование API производилось с помощью Postman`
+*Тестирование API производилось с помощью Postman*
