@@ -36,6 +36,11 @@ func SignUp(app *config.Application) http.HandlerFunc {
 		username := r.URL.Query().Get("username")
 		password := r.URL.Query().Get("password")
 
+		if username == "" || password == "" {
+			app.ClientError(w, http.StatusBadRequest)
+			return
+		}
+
 		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
 
 		id, err := app.UserModel.CreateUser(username, encodedPassword)
