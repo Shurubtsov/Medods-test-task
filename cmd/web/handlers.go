@@ -52,7 +52,6 @@ func SignUp(app *config.Application) http.HandlerFunc {
 
 		id, err := app.UserModel.CreateUser(user.Username, encodedPassword)
 		if err != nil {
-			app.ErrorLog.Fatalf("something went wrong when server attempt to create user, error: %v", err.Error())
 			app.ServerError(w, err)
 			return
 		}
@@ -61,7 +60,7 @@ func SignUp(app *config.Application) http.HandlerFunc {
 	}
 }
 
-func Login(app *config.Application) http.HandlerFunc {
+func GetTokensForUser(app *config.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.Header().Set("Allow", http.MethodPost)

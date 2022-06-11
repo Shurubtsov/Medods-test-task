@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/dshurubtsov/pkg/models"
@@ -26,14 +25,22 @@ func (m *UserModel) CreateUser(username, password string) (string, error) {
 	defer cancel()
 
 	collection := m.DB.Database("testbase").Collection("users")
+	err := collection.FindOne(ctx, bson.D{
+		{Key: "username", Value: username},
+	}).Err()
+	if err != mongo.ErrNoDocuments {
+		fmt.Println(err)
+		return "", errors.New("user already exists")
+	}
+
 	res, err := collection.InsertOne(ctx, bson.D{
 		{Key: "username", Value: username},
 		{Key: "password", Value: password},
 	})
 	if err != nil {
-		log.Fatal(err.Error())
 		return "", err
 	}
+
 	id := fmt.Sprintf("%v", res.InsertedID)
 	return id, nil
 }
@@ -82,13 +89,10 @@ func (m *UserModel) FindById(id string) (models.User, error) {
 	err := collection.FindOne(ctx, bson.D{
 		{Key: "_id", Value: objId},
 	}).Decode(&user)
-
-	fmt.Println(user)
-
 	if err == mongo.ErrNoDocuments {
-		return models.User{}, err
+		return user, err
 	} else if err != nil {
-		return models.User{}, err
+		return user, err
 	}
 
 	return user, nil

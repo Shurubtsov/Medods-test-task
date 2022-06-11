@@ -12,7 +12,9 @@ func Routes(app *config.Application) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", Home(app))
 	mux.HandleFunc("/auth/sign-up", SignUp(app))
-	mux.HandleFunc("/auth/login", Login(app))
+
+	// Main routes for test task
+	mux.HandleFunc("/auth/get/tokens", GetTokensForUser(app))
 	mux.HandleFunc("/auth/refresh", Refresh(app))
 
 	return mux
