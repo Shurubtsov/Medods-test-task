@@ -33,15 +33,16 @@ func SignUp(app *config.Application) http.HandlerFunc {
 			return
 		}
 
+		// Get username and password from querys from request
 		username := r.URL.Query().Get("username")
 		password := r.URL.Query().Get("password")
-
 		if username == "" || password == "" {
 			app.ClientError(w, http.StatusBadRequest)
 			return
 		}
 
 		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+		fmt.Println("[CREATE-USER] encoded password: ", encodedPassword)
 
 		id, err := app.UserModel.CreateUser(username, encodedPassword)
 		if err != nil {
@@ -63,6 +64,11 @@ func Login(app *config.Application) http.HandlerFunc {
 		}
 
 		id := r.URL.Query().Get("id")
+		if id == "" {
+			app.ClientError(w, http.StatusBadRequest)
+			return
+		}
+
 		tokens := models.Token{}
 		user, err := app.UserModel.FindById(id)
 		if err != nil {
@@ -77,7 +83,7 @@ func Login(app *config.Application) http.HandlerFunc {
 			return
 		}
 		// create refresh token for user
-		refreshToken, err := app.TokenManager.NewRefreshToken()
+		refreshToken, err := app.TokenManager.NewRefreshToken(accessToken)
 		if err != nil {
 			app.ErrorLog.Fatalf("can't create refresh token, error: %v", err.Error())
 			return
@@ -131,6 +137,7 @@ func Refresh(app *config.Application) http.HandlerFunc {
 			app.ServerError(w, err)
 			return
 		}
+		tokens.RefreshToken = string(decodedBase64RefreshToken)
 
 		// find user by refresh token
 		user, err := app.UserModel.FindByRefreshToken(string(decodedBase64RefreshToken))
@@ -138,6 +145,15 @@ func Refresh(app *config.Application) http.HandlerFunc {
 			app.NotFound(w)
 			return
 		}
+
+		// check for valid token
+		ok, err := app.TokenManager.ValidateRefreshToken(tokens)
+		if !ok || err != nil {
+			app.ClientError(w, http.StatusBadRequest)
+			fmt.Fprint(w, "invalid token")
+			return
+		}
+
 		//fmt.Println("[HANDLER:137]User after find ref token is ", user)
 
 		// update tokenы if user finded
@@ -147,7 +163,7 @@ func Refresh(app *config.Application) http.HandlerFunc {
 			return
 		}
 
-		refreshToken, err := app.TokenManager.NewRefreshToken()
+		refreshToken, err := app.TokenManager.NewRefreshToken(accessToken)
 		if err != nil {
 			app.ErrorLog.Fatalf("can't create refresh token, error: %v", err.Error())
 			return

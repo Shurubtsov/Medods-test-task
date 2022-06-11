@@ -1,12 +1,17 @@
 package tokens
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha512"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"math/rand"
-	"time"
+	"io"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/dshurubtsov/pkg/models"
 )
 
 type Manager struct {
@@ -47,15 +52,63 @@ func (m *Manager) ParseJWT(accessToken string) (string, error) {
 	return claims["sub"].(string), nil
 }
 
-func (m *Manager) NewRefreshToken() (string, error) {
-	b := make([]byte, 32)
+func (m *Manager) ValidateRefreshToken(tokens models.Token) (bool, error) {
+	sha512 := sha512.New()
+	io.WriteString(sha512, m.signingKey)
 
-	s := rand.NewSource(time.Now().Unix())
-	r := rand.New(s)
+	salt := string(sha512.Sum(nil))[0:16]
+	block, err := aes.NewCipher([]byte(salt))
+	if err != nil {
+		return false, err
+	}
 
-	if _, err := r.Read(b); err != nil {
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return false, err
+	}
+
+	data, err := base64.URLEncoding.DecodeString(tokens.RefreshToken)
+	if err != nil {
+		return false, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+
+	plain, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return false, err
+	}
+
+	if string(plain) != tokens.AccessToken {
+		return false, errors.New("invalid tokens")
+	}
+
+	return true, nil
+}
+
+func (m *Manager) NewRefreshToken(accessToken string) (string, error) {
+	sha512 := sha512.New()
+	io.WriteString(sha512, m.signingKey)
+
+	salt := string(sha512.Sum(nil))[0:16]
+	block, err := aes.NewCipher([]byte(salt))
+	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("%x", b), nil
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	_, err = io.ReadFull(rand.Reader, nonce)
+	if err != nil {
+		return "", err
+	}
+
+	refreshToken := base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, []byte(accessToken), nil))
+
+	return refreshToken, nil
 }
