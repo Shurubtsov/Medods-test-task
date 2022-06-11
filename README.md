@@ -13,9 +13,9 @@
 2.  >       go run ./cmd/web/
 
 Реализованные ендпоинты:
-1. > localhost:port/auth/signup?username="имя пользователя"&password="пароль"
-2. > localhost:port/auth/login?id="ObjectId"
-3. > localhost:port/auth/refresh
+1. > POST localhost:port/auth/signup?username="имя пользователя"&password="пароль"
+2. > POST localhost:port/auth/login?id="ObjectId"
+3. > POST localhost:port/auth/refresh
 
 1 - реализует создание пользователя в монгоДБ, параметры запроса username и password
 
