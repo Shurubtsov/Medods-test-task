@@ -24,6 +24,7 @@ func (m *UserModel) CreateUser(username, password string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// attempt to find existance user
 	collection := m.DB.Database("testbase").Collection("users")
 	err := collection.FindOne(ctx, bson.D{
 		{Key: "username", Value: username},
@@ -79,8 +80,6 @@ func (m *UserModel) FindById(id string) (models.User, error) {
 
 	collection := m.DB.Database("testbase").Collection("users")
 	objId, _ := primitive.ObjectIDFromHex(id)
-
-	fmt.Println("id is :", objId)
 
 	err := collection.FindOne(ctx, bson.D{
 		{Key: "_id", Value: objId},

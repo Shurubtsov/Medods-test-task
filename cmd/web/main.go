@@ -11,10 +11,19 @@ import (
 	"github.com/dshurubtsov/cmd/config"
 	"github.com/dshurubtsov/pkg/mongodb"
 	"github.com/dshurubtsov/pkg/tokens"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
+
+func init() {
+	// get env
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
 
 func main() {
 	// configuration flags before run app
@@ -38,7 +47,7 @@ func main() {
 	defer mongoClient.Disconnect(ctx)
 
 	// init jwt maker for tokens
-	tokenManager, err := tokens.NewManager("secret-phrase0907-331-2356")
+	tokenManager, err := tokens.NewManager(os.Getenv("SECRET_KEY"))
 	if err != nil {
 		errorLog.Fatal("can't create token manager")
 	}

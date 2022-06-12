@@ -76,13 +76,15 @@ func GetTokensForUser(app *config.Application) http.HandlerFunc {
 		user, err := app.UserModel.FindById(id)
 		if err != nil {
 			app.ClientError(w, http.StatusBadRequest)
+			return
 		}
 
-		tokens, err := createTokens(*app, user)
+		tokens, err := createTokens(app, user)
 		if err != nil {
 			app.ServerError(w, err)
 			return
 		}
+		//fmt.Println("[TEST TOKEN]access_token is: ", test)
 
 		// bcrypt token for storage it in database
 		bcryptedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(tokens.RefreshToken), 14)
@@ -153,11 +155,12 @@ func Refresh(app *config.Application) http.HandlerFunc {
 			return
 		}
 
-		tokens, err = createTokens(*app, user)
+		tokens, err = createTokens(app, user)
 		if err != nil {
 			app.ServerError(w, err)
 			return
 		}
+		//fmt.Println("[HANDLER REFRESH]Tokens -> ", tokens)
 
 		// bcrypt token for storage it in database
 		bcryptedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(tokens.RefreshToken), 14)
@@ -185,16 +188,18 @@ func Refresh(app *config.Application) http.HandlerFunc {
 }
 
 // Create couple tokens with binding each other
-func createTokens(app config.Application, user models.User) (models.Token, error) {
+func createTokens(app *config.Application, user models.User) (models.Token, error) {
 
 	tokens := models.Token{}
 
+	//fmt.Println("[TOKENS]user: ", user)
 	// encode JWT with payload of sub from ID user for his identification in service
 	accessToken, err := app.TokenManager.NewJWT(user.ID.Hex())
 	if err != nil {
 		app.ErrorLog.Fatal("can't create new tokens")
 		return tokens, err
 	}
+	//fmt.Println("[TOKENS]access: ", accessToken)
 
 	// encoded with salt of access token for his binding to refresh token
 	refreshToken, err := app.TokenManager.NewRefreshToken(accessToken)

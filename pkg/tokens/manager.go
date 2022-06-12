@@ -9,9 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/dshurubtsov/pkg/models"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type Manager struct {
@@ -27,7 +28,12 @@ func NewManager(signingKey string) (*Manager, error) {
 }
 
 func (m *Manager) NewJWT(userId string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.StandardClaims{Subject: userId})
+	// time when token will be expired
+	timeExp := jwt.NewNumericDate(time.Now().Add(time.Hour * 2))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.RegisteredClaims{
+		Subject:   userId,
+		ExpiresAt: timeExp,
+	})
 
 	return token.SignedString([]byte(m.signingKey))
 }
