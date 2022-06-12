@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dshurubtsov/pkg/models"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -34,7 +35,12 @@ func (m *UserModel) CreateUser(username, password string) (string, error) {
 		return "", errors.New("user already exists")
 	}
 
-	res, err := collection.InsertOne(ctx, bson.D{
+	// generate uuid from library
+	uuidNew := uuid.New()
+	uuid := strings.Replace(uuidNew.String(), "-", "", -1)
+
+	_, err = collection.InsertOne(ctx, bson.D{
+		{Key: "uuid", Value: uuid},
 		{Key: "username", Value: username},
 		{Key: "password", Value: password},
 	})
@@ -42,8 +48,7 @@ func (m *UserModel) CreateUser(username, password string) (string, error) {
 		return "", err
 	}
 
-	id := fmt.Sprintf("%v", res.InsertedID)
-	return id, nil
+	return uuid, nil
 }
 
 func (m *UserModel) UpdateUserToken(id, refreshToken string) error {
@@ -53,10 +58,9 @@ func (m *UserModel) UpdateUserToken(id, refreshToken string) error {
 	defer cancel()
 
 	collection := m.DB.Database("testbase").Collection("users")
-	objId, _ := primitive.ObjectIDFromHex(id)
 
 	_, err := collection.UpdateOne(ctx, bson.D{
-		{Key: "_id", Value: objId},
+		{Key: "uuid", Value: id},
 	}, bson.D{{Key: "$set", Value: bson.D{{Key: "refresh_token", Value: refreshToken}}}})
 	if err != nil {
 		return err
@@ -79,10 +83,9 @@ func (m *UserModel) FindById(id string) (models.User, error) {
 	user := models.User{}
 
 	collection := m.DB.Database("testbase").Collection("users")
-	objId, _ := primitive.ObjectIDFromHex(id)
 
 	err := collection.FindOne(ctx, bson.D{
-		{Key: "_id", Value: objId},
+		{Key: "uuid", Value: id},
 	}).Decode(&user)
 
 	if err == mongo.ErrNoDocuments {

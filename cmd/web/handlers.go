@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/dshurubtsov/cmd/config"
 	"github.com/dshurubtsov/pkg/models"
@@ -54,7 +53,7 @@ func SignUp(app *config.Application) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprint(w, fmt.Sprintln("id: ", strings.Trim(id, `ObjectID(")`)))
+		fmt.Fprint(w, fmt.Sprintln("id: ", id))
 	}
 }
 
