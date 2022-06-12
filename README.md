@@ -47,3 +47,22 @@
 }
 ```
 *Тестирование API производилось с помощью Postman*
+
+### MongoDB
+
+Пример документа внутри бд:
+```json
+{
+  "_id": {
+    "$oid": "62a5aa6886ffd3160a6170d1"
+  },
+  "uuid": "2d02c2395cc749778f2a969ba0629968",
+  "username": "Admin",
+  "password": "YWRtaW4wMDEwMGFkbWlu",
+  "refresh_token": "$2a$14$6g5cZ93iHjX9Ov.E0TzJnu4H1rjx/oMLuOCOkW8flmgQCz5X3OzEa"
+}
+```
+Для работы приложения использовались следующие бд и коллекция:
+```go
+collection := m.DB.Database("testbase").Collection("users")
+```
